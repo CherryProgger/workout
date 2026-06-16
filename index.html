@@ -52,6 +52,8 @@
           <p class="progress-text" id="progress-text">0 из 0 повторений</p>
         </div>
 
+        <div class="reminder-strip" id="reminder-strip" hidden></div>
+
         <div class="exercise-list" id="exercise-list"></div>
 
         <div class="complete-banner" id="complete-banner" hidden>
@@ -119,15 +121,21 @@
         <div class="settings-section">
           <h2 class="settings-heading">Напоминания</h2>
           <label class="toggle-row">
-            <span>Ежедневное напоминание</span>
+            <span>Напоминать о незавершённой тренировке</span>
             <input type="checkbox" id="reminder-enabled">
           </label>
-          <label class="field-row">
-            <span>Время</span>
-            <input type="time" id="reminder-time" value="08:00">
-          </label>
-          <p class="settings-hint">На iPhone напоминания работают, если приложение добавлено на экран «Домой» и разрешены уведомления.</p>
+          <p class="settings-hint">Уведомление приходит только если тренировка за день ещё не выполнена.</p>
+          <div id="reminder-times-list" class="reminder-times-list"></div>
+          <button class="btn btn-secondary btn-block" type="button" id="add-reminder-time">+ Добавить время</button>
+          <div class="reminder-presets">
+            <button class="btn btn-secondary" type="button" data-reminder-preset="light">Утро</button>
+            <button class="btn btn-secondary" type="button" data-reminder-preset="standard">Стандарт</button>
+            <button class="btn btn-secondary" type="button" data-reminder-preset="intensive">Интенсив</button>
+          </div>
+          <div id="reminder-status" class="reminder-status"></div>
+          <p class="settings-hint">На iPhone: добавь приложение на экран «Домой» и разреши уведомления. Если приложение закрыто, напоминание придёт при следующем открытии.</p>
           <button class="btn btn-secondary btn-block" id="request-notifications-btn">Разрешить уведомления</button>
+          <button class="btn btn-secondary btn-block" type="button" id="test-reminder-btn">Проверить уведомление</button>
         </div>
 
         <div class="settings-section">

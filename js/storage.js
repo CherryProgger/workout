@@ -64,9 +64,22 @@ function migrateState(raw) {
   if (!state.weightLog) state.weightLog = [];
   if (!state.dayNotes) state.dayNotes = {};
   if (!state.settings) {
-    state.settings = { reminderEnabled: false, reminderTime: '08:00', scheduleStart: todayKey() };
+    state.settings = {
+      reminderEnabled: false,
+      reminderTimes: ['08:00', '14:00', '21:00'],
+      reminderSentLog: {},
+      scheduleStart: todayKey(),
+    };
   }
   if (!state.settings.scheduleStart) state.settings.scheduleStart = todayKey();
+  if (state.settings.reminderTime && !state.settings.reminderTimes) {
+    state.settings.reminderTimes = [state.settings.reminderTime];
+    delete state.settings.reminderTime;
+  }
+  if (!state.settings.reminderTimes?.length) {
+    state.settings.reminderTimes = ['08:00', '14:00', '21:00'];
+  }
+  if (!state.settings.reminderSentLog) state.settings.reminderSentLog = {};
 
   return state;
 }
@@ -96,7 +109,8 @@ function createDefaultState() {
     dayNotes: {},
     settings: {
       reminderEnabled: false,
-      reminderTime: '08:00',
+      reminderTimes: ['08:00', '14:00', '21:00'],
+      reminderSentLog: {},
       scheduleStart: todayKey(),
     },
   };
@@ -459,4 +473,45 @@ function getFrequencyLabel(exercise) {
 function updateSettings(state, settings) {
   state.settings = { ...state.settings, ...settings };
   saveState(state);
+}
+
+function getReminderTimes(settings) {
+  return [...(settings.reminderTimes || ['08:00', '14:00', '21:00'])]
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function wasReminderSent(state, dateKey, time) {
+  return state.settings.reminderSentLog[dateKey]?.includes(time) ?? false;
+}
+
+function markReminderSent(state, dateKey, time) {
+  if (!state.settings.reminderSentLog[dateKey]) {
+    state.settings.reminderSentLog[dateKey] = [];
+  }
+  if (!state.settings.reminderSentLog[dateKey].includes(time)) {
+    state.settings.reminderSentLog[dateKey].push(time);
+    saveState(state);
+  }
+}
+
+function getReminderProgressText(state, dateKey = todayKey()) {
+  if (!isTrainingDay(state, dateKey)) return 'Сегодня день отдыха.';
+  if (isDayComplete(state, dateKey)) return 'Тренировка выполнена.';
+
+  const progress = getDayProgress(state, dateKey);
+  const remaining = progress.total - progress.done;
+  if (progress.done === 0) {
+    return `Тренировка не начата. Осталось ${remaining} повторений.`;
+  }
+  if (progress.percent >= 80) {
+    return `Почти готово — ${progress.percent}%. Осталось ${remaining}.`;
+  }
+  return `Выполнено ${progress.percent}%. Осталось ${remaining} повторений.`;
+}
+
+function getReminderTitle(time) {
+  const [h] = time.split(':').map(Number);
+  if (h < 12) return 'Утренний созыв';
+  if (h < 18) return 'Дневная проверка';
+  return 'Вечерний созыв';
 }

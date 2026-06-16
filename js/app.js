@@ -1,6 +1,6 @@
 let state = loadState();
 let editingExerciseId = null;
-let reminderTimer = null;
+let reminderTimers = [];
 let selectedHistoryDate = todayKey();
 let calendarCursor = (() => {
   const d = new Date();
@@ -60,6 +60,12 @@ function init() {
   renderAll();
   scheduleReminderCheck();
   setInterval(scheduleReminderCheck, 60_000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkMissedReminders();
+      scheduleReminderCheck();
+    }
+  });
 }
 
 function registerServiceWorker() {
@@ -135,14 +141,47 @@ function bindForms() {
   document.getElementById('reminder-enabled').addEventListener('change', (e) => {
     updateSettings(state, { reminderEnabled: e.target.checked });
     scheduleReminderCheck();
+    renderReminderUI();
   });
 
-  document.getElementById('reminder-time').addEventListener('change', (e) => {
-    updateSettings(state, { reminderTime: e.target.value });
+  document.getElementById('add-reminder-time').addEventListener('click', () => {
+    const times = getReminderTimes(state.settings);
+    if (times.length >= 6) {
+      alert('Максимум 6 напоминаний в день.');
+      return;
+    }
+    times.push('18:00');
+    updateSettings(state, { reminderTimes: times });
+    renderReminderUI();
     scheduleReminderCheck();
   });
 
+  document.querySelectorAll('[data-reminder-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const presets = {
+        light: ['08:00'],
+        standard: ['08:00', '14:00', '21:00'],
+        intensive: ['07:00', '12:00', '17:00', '21:00'],
+      };
+      const preset = presets[btn.dataset.reminderPreset];
+      if (!preset) return;
+      updateSettings(state, { reminderTimes: preset });
+      renderReminderUI();
+      scheduleReminderCheck();
+    });
+  });
+
   document.getElementById('request-notifications-btn').addEventListener('click', requestNotifications);
+  document.getElementById('test-reminder-btn').addEventListener('click', () => {
+    if (Notification.permission !== 'granted') {
+      alert('Сначала разреши уведомления.');
+      return;
+    }
+    new Notification('FORM · Проверка', {
+      body: getReminderProgressText(state),
+      icon: './icons/icon.svg',
+    });
+  });
   document.querySelectorAll('[data-template]').forEach((btn) => {
     btn.addEventListener('click', () => applyTemplate(btn.dataset.template));
   });
@@ -178,34 +217,212 @@ async function requestNotifications() {
   }
   const perm = await Notification.requestPermission();
   if (perm === 'granted') {
+    updateSettings(state, { reminderEnabled: true });
+    document.getElementById('reminder-enabled').checked = true;
     new Notification('FORM', {
-      body: 'Напоминания включены. Дисциплина начинается сегодня.',
+      body: 'Напоминания включены. Мы сообщим, если тренировка не завершена.',
       icon: './icons/icon.svg',
     });
     scheduleReminderCheck();
+    renderReminderUI();
   }
 }
 
-function scheduleReminderCheck() {
-  if (reminderTimer) clearTimeout(reminderTimer);
+function clearReminderTimers() {
+  reminderTimers.forEach(clearTimeout);
+  reminderTimers = [];
+}
+
+function trySendReminder(dateKey, time) {
+  if (!state.settings.reminderEnabled) return;
+  if (Notification.permission !== 'granted') return;
+  if (!isTrainingDay(state, dateKey)) return;
+  if (isDayComplete(state, dateKey)) return;
+  if (wasReminderSent(state, dateKey, time)) return;
+
+  new Notification(`FORM · ${getReminderTitle(time)}`, {
+    body: getReminderProgressText(state, dateKey),
+    icon: './icons/icon.svg',
+    tag: `reminder-${dateKey}-${time}`,
+  });
+  markReminderSent(state, dateKey, time);
+  renderReminderStrip();
+  renderReminderUI();
+}
+
+function checkMissedReminders() {
   if (!state.settings.reminderEnabled) return;
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
-  const target = getNextReminderDate();
-  if (!target) return;
 
-  const ms = target.getTime() - Date.now();
-  reminderTimer = setTimeout(() => {
-    const key = formatDateKey(target);
-    if (isTrainingDay(state, key) && !isDayComplete(state, key)) {
-      new Notification('FORM', {
-        body: 'Пора тренироваться. Сегодня запланированные упражнения ждут.',
-        icon: './icons/icon.svg',
-        tag: 'daily-reminder',
-      });
-    }
-    scheduleReminderCheck();
-  }, ms);
+  const key = todayKey();
+  if (!isTrainingDay(state, key) || isDayComplete(state, key)) return;
+
+  const now = new Date();
+  getReminderTimes(state.settings).forEach((time) => {
+    const [h, m] = time.split(':').map(Number);
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
+    if (now >= target) trySendReminder(key, time);
+  });
+}
+
+function scheduleReminderCheck() {
+  clearReminderTimers();
+  if (!state.settings.reminderEnabled) return;
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+
+  checkMissedReminders();
+
+  const now = Date.now();
+  for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+    const date = new Date();
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() + dayOffset);
+    const key = formatDateKey(date);
+    if (!isTrainingDay(state, key)) continue;
+
+    getReminderTimes(state.settings).forEach((time) => {
+      const [h, m] = time.split(':').map(Number);
+      const target = new Date(date);
+      target.setHours(h, m, 0, 0);
+      if (target.getTime() <= now) return;
+      if (dayOffset === 0 && isDayComplete(state, key)) return;
+
+      const ms = target.getTime() - now;
+      const timerId = setTimeout(() => {
+        trySendReminder(key, time);
+        scheduleReminderCheck();
+      }, ms);
+      reminderTimers.push(timerId);
+    });
+  }
+}
+
+function getReminderSlotState(time, dateKey = todayKey()) {
+  if (!isTrainingDay(state, dateKey)) return 'rest';
+  if (isDayComplete(state, dateKey)) return 'done';
+  if (wasReminderSent(state, dateKey, time)) return 'sent';
+
+  const [h, m] = time.split(':').map(Number);
+  const target = new Date();
+  target.setHours(h, m, 0, 0);
+  const now = new Date();
+  if (now >= target) return 'due';
+
+  const times = getReminderTimes(state.settings);
+  const nextTime = times.find((t) => {
+    const [th, tm] = t.split(':').map(Number);
+    const td = new Date();
+    td.setHours(th, tm, 0, 0);
+    return td > now && !wasReminderSent(state, dateKey, t);
+  });
+  return nextTime === time ? 'next' : 'wait';
+}
+
+function renderReminderStrip() {
+  const strip = document.getElementById('reminder-strip');
+  if (!state.settings.reminderEnabled || !isTrainingDay(state) || isDayComplete(state)) {
+    strip.hidden = true;
+    return;
+  }
+
+  const key = todayKey();
+  const times = getReminderTimes(state.settings);
+  const stateLabels = {
+    done: 'Готово',
+    sent: 'Отправлено',
+    due: 'Пора',
+    next: 'Следующее',
+    wait: 'Ожидает',
+    rest: 'Отдых',
+  };
+
+  strip.hidden = false;
+  strip.innerHTML = `
+    <div class="reminder-strip-title">Напоминания сегодня</div>
+    <p class="reminder-strip-text">${escapeHtml(getReminderProgressText(state, key))}</p>
+    <div class="reminder-timeline">
+      ${times.map((time) => {
+        const slot = getReminderSlotState(time, key);
+        return `
+          <div class="reminder-slot state-${slot}">
+            <span class="reminder-slot-time">${time}</span>
+            <span class="reminder-slot-state">${stateLabels[slot]}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderReminderUI() {
+  const list = document.getElementById('reminder-times-list');
+  const status = document.getElementById('reminder-status');
+  const times = getReminderTimes(state.settings);
+
+  list.innerHTML = times.map((time, index) => `
+    <div class="reminder-time-row" data-index="${index}">
+      <input type="time" value="${time}" data-reminder-time="${index}">
+      <button class="btn-icon danger" type="button" data-remove-reminder="${index}" title="Удалить">×</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('[data-reminder-time]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const idx = Number(input.dataset.reminderTime);
+      const updated = getReminderTimes(state.settings);
+      updated[idx] = input.value;
+      updateSettings(state, { reminderTimes: [...new Set(updated)].sort() });
+      scheduleReminderCheck();
+      renderReminderUI();
+      renderReminderStrip();
+    });
+  });
+
+  list.querySelectorAll('[data-remove-reminder]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.removeReminder);
+      const updated = getReminderTimes(state.settings);
+      if (updated.length <= 1) {
+        alert('Нужно хотя бы одно напоминание.');
+        return;
+      }
+      updated.splice(idx, 1);
+      updateSettings(state, { reminderTimes: updated });
+      scheduleReminderCheck();
+      renderReminderUI();
+      renderReminderStrip();
+    });
+  });
+
+  if (!state.settings.reminderEnabled) {
+    status.innerHTML = '<p class="settings-hint">Напоминания выключены.</p>';
+    return;
+  }
+
+  const key = todayKey();
+  if (!isTrainingDay(state, key)) {
+    status.innerHTML = '<p class="settings-hint">Сегодня день отдыха — напоминания не нужны.</p>';
+    return;
+  }
+  if (isDayComplete(state, key)) {
+    status.innerHTML = '<p class="settings-hint">Сегодня тренировка выполнена. Напоминания не придут.</p>';
+    return;
+  }
+
+  const sent = times.filter((t) => wasReminderSent(state, key, t)).length;
+  status.innerHTML = `
+    <div class="reminder-status-item">
+      <span class="reminder-status-label">Сегодня отправлено</span>
+      <span class="reminder-status-value">${sent} из ${times.length}</span>
+    </div>
+    <div class="reminder-status-item">
+      <span class="reminder-status-label">Прогресс</span>
+      <span class="reminder-status-value">${getDayProgress(state, key).percent}%</span>
+    </div>
+  `;
 }
 
 function renderAll() {
@@ -269,6 +486,7 @@ function renderToday() {
   ring.style.strokeDashoffset = offset;
 
   document.getElementById('complete-banner').hidden = !complete || !trainingDay;
+  renderReminderStrip();
   if (!trainingDay) {
     list.innerHTML = `
       <article class="exercise-card rest-card">
@@ -653,7 +871,7 @@ function renderSettings() {
   });
 
   document.getElementById('reminder-enabled').checked = state.settings.reminderEnabled;
-  document.getElementById('reminder-time').value = state.settings.reminderTime;
+  renderReminderUI();
 }
 
 function applyTemplate(name) {
@@ -740,19 +958,6 @@ function openExerciseModal(exercise = null) {
 function updateCustomDaysVisibility() {
   const frequency = document.getElementById('exercise-frequency').value;
   document.getElementById('custom-days-field').hidden = frequency !== 'custom';
-}
-
-function getNextReminderDate() {
-  const [h, m] = (state.settings.reminderTime || '08:00').split(':').map(Number);
-  const now = new Date();
-  for (let i = 0; i < 30; i++) {
-    const candidate = new Date();
-    candidate.setHours(h, m, 0, 0);
-    candidate.setDate(candidate.getDate() + i);
-    const key = formatDateKey(candidate);
-    if (candidate > now && isTrainingDay(state, key) && !isDayComplete(state, key)) return candidate;
-  }
-  return null;
 }
 
 function renderWeekdayHeader() {

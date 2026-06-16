@@ -933,6 +933,121 @@ body {
   color: var(--text-muted);
 }
 
+.reminder-strip {
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.reminder-strip-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+
+.reminder-strip-text {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.reminder-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reminder-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.reminder-slot:last-child {
+  border-bottom: none;
+}
+
+.reminder-slot-time {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+.reminder-slot-state {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.reminder-slot.state-done .reminder-slot-state { color: var(--success); }
+.reminder-slot.state-sent .reminder-slot-state { color: var(--text-faint); }
+.reminder-slot.state-due .reminder-slot-state { color: var(--danger); font-weight: 600; }
+.reminder-slot.state-next .reminder-slot-state { color: var(--accent-soft); font-weight: 600; }
+.reminder-slot.state-wait .reminder-slot-state { color: var(--text-faint); }
+
+.reminder-times-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.reminder-time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reminder-time-row input[type="time"] {
+  flex: 1;
+  padding: 12px 14px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+}
+
+.reminder-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.reminder-status {
+  margin-bottom: 12px;
+}
+
+.reminder-status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.reminder-status-item:last-child {
+  border-bottom: none;
+}
+
+.reminder-status-label {
+  color: var(--text-muted);
+}
+
 .import-btn {
   display: inline-flex;
   align-items: center;
