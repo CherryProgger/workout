@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <meta name="theme-color" content="#0f1419">
+  <meta name="theme-color" content="#f4f1eb">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Workout">
-  <title>Workout</title>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="FORM">
+  <title>FORM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon.svg">
@@ -15,15 +17,22 @@
 </head>
 <body>
   <div id="app">
+    <div class="masthead">
+      <div class="brand-wordmark">FORM</div>
+      <p class="brand-tagline">Discipline · Strength · Progress</p>
+    </div>
     <header class="header">
       <div class="header-top">
         <h1 class="header-title" id="page-title">Сегодня</h1>
+      </div>
+      <p class="header-slogan" id="header-slogan">Один день за раз.</p>
+      <div class="header-meta">
+        <p class="header-date" id="header-date"></p>
         <div class="streak-badge" id="streak-badge" hidden>
-          <span class="streak-fire">🔥</span>
-          <span id="streak-count">0</span>
+          <span>Серия</span>
+          <span class="streak-count" id="streak-count">0</span>
         </div>
       </div>
-      <p class="header-date" id="header-date"></p>
     </header>
 
     <main class="main">
@@ -37,7 +46,7 @@
             </svg>
             <div class="progress-ring-label">
               <span class="progress-ring-value" id="progress-percent">0%</span>
-              <span class="progress-ring-caption">готово</span>
+              <span class="progress-ring-caption">выполнено</span>
             </div>
           </div>
           <p class="progress-text" id="progress-text">0 из 0 повторений</p>
@@ -46,11 +55,8 @@
         <div class="exercise-list" id="exercise-list"></div>
 
         <div class="complete-banner" id="complete-banner" hidden>
-          <span>🎉</span>
-          <div>
-            <strong>Тренировка выполнена!</strong>
-            <p>Отличная работа, так держать.</p>
-          </div>
+          <strong>Тренировка завершена</strong>
+          <p>Дисциплина сильнее мотивации. Завтра — снова.</p>
         </div>
       </section>
 
@@ -58,11 +64,11 @@
       <section class="view" id="view-history" data-view="history">
         <div class="stats-row" id="stats-row"></div>
         <div class="calendar-wrap">
-          <h3 class="settings-heading">Активность 14 дней</h3>
+          <h3 class="section-label">Активность · 14 дней</h3>
           <canvas id="activity-chart" class="weight-chart"></canvas>
         </div>
         <div class="calendar-wrap">
-          <h3 class="settings-heading">Достижения</h3>
+          <h3 class="section-label">Достижения</h3>
           <div class="achievements" id="achievements"></div>
         </div>
         <div class="calendar-wrap">
@@ -104,9 +110,9 @@
         <div class="settings-section">
           <h2 class="settings-heading">Шаблоны</h2>
           <div class="template-grid">
-            <button class="btn btn-secondary" data-template="classic">Классика 100/100/100</button>
+            <button class="btn btn-secondary" data-template="classic">Классика · 100 / 100 / 100</button>
             <button class="btn btn-secondary" data-template="strength">Силовой фокус</button>
-            <button class="btn btn-secondary" data-template="light">Легкий старт</button>
+            <button class="btn btn-secondary" data-template="light">Лёгкий старт</button>
           </div>
         </div>
 
@@ -150,19 +156,15 @@
 
     <nav class="tab-bar">
       <button class="tab tab-active" data-tab="today">
-        <span class="tab-icon">💪</span>
         <span class="tab-label">Сегодня</span>
       </button>
       <button class="tab" data-tab="history">
-        <span class="tab-icon">📅</span>
         <span class="tab-label">История</span>
       </button>
       <button class="tab" data-tab="weight">
-        <span class="tab-icon">⚖️</span>
         <span class="tab-label">Вес</span>
       </button>
       <button class="tab" data-tab="settings">
-        <span class="tab-icon">⚙️</span>
         <span class="tab-label">Настройки</span>
       </button>
     </nav>

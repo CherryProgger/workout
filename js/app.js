@@ -14,6 +14,40 @@ const TITLES = {
   settings: 'Настройки',
 };
 
+const SLOGANS = {
+  today: [
+    'Один день за раз.',
+    'Дисциплина — это свобода.',
+    'Маленькие шаги. Большой результат.',
+    'Сегодня — твой день.',
+  ],
+  history: [
+    'Каждый повтор имеет значение.',
+    'Прогресс любит постоянство.',
+    'История пишется ежедневно.',
+  ],
+  weight: [
+    'Тело помнит. Цифры говорят.',
+    'Измеряй. Корректируй. Двигайся.',
+    'Форма — это марафон, не спринт.',
+  ],
+  settings: [
+    'Настрой ритм. Держи курс.',
+    'Система сильнее настроения.',
+    'Твои правила. Твой путь.',
+  ],
+};
+
+const CHART = {
+  ink: '#1c1c1c',
+  muted: '#a8a29a',
+  success: '#3d5c4a',
+  warn: '#8b6914',
+  danger: '#8b3a3a',
+  rest: '#d4cec3',
+  grid: 'rgba(28, 28, 28, 0.06)',
+};
+
 const CIRCUMFERENCE = 2 * Math.PI * 52;
 
 document.addEventListener('DOMContentLoaded', init);
@@ -50,6 +84,7 @@ function switchTab(name) {
     v.classList.toggle('view-active', v.dataset.view === name);
   });
   document.getElementById('page-title').textContent = TITLES[name] || name;
+  updateSlogan(name);
   if (name === 'weight') renderWeight();
   if (name === 'history') renderHistory();
   if (name === 'settings') renderSettings();
@@ -143,8 +178,8 @@ async function requestNotifications() {
   }
   const perm = await Notification.requestPermission();
   if (perm === 'granted') {
-    new Notification('Workout 💪', {
-      body: 'Напоминания включены! Не забудь потренироваться сегодня.',
+    new Notification('FORM', {
+      body: 'Напоминания включены. Дисциплина начинается сегодня.',
       icon: './icons/icon.svg',
     });
     scheduleReminderCheck();
@@ -163,8 +198,8 @@ function scheduleReminderCheck() {
   reminderTimer = setTimeout(() => {
     const key = formatDateKey(target);
     if (isTrainingDay(state, key) && !isDayComplete(state, key)) {
-      new Notification('Workout 💪', {
-        body: 'Пора тренироваться! Сегодня запланированные упражнения ждут.',
+      new Notification('FORM', {
+        body: 'Пора тренироваться. Сегодня запланированные упражнения ждут.',
         icon: './icons/icon.svg',
         tag: 'daily-reminder',
       });
@@ -197,6 +232,24 @@ function renderHeader() {
   } else {
     badge.hidden = true;
   }
+
+  const activeTab = document.querySelector('.tab-active')?.dataset.tab || 'today';
+  updateSlogan(activeTab);
+}
+
+function updateSlogan(view) {
+  const list = SLOGANS[view] || SLOGANS.today;
+  const dayIndex = new Date().getDate() % list.length;
+  document.getElementById('header-slogan').textContent = list[dayIndex];
+}
+
+function exerciseMark(name) {
+  return escapeHtml((name || '?').charAt(0).toUpperCase());
+}
+
+function statusPill(status) {
+  const labels = { complete: 'Выполнено', partial: 'Частично', missed: 'Пропуск', rest: 'Отдых' };
+  return `<span class="status-pill ${status}">${labels[status]}</span>`;
 }
 
 function renderToday() {
@@ -217,7 +270,11 @@ function renderToday() {
 
   document.getElementById('complete-banner').hidden = !complete || !trainingDay;
   if (!trainingDay) {
-    list.innerHTML = '<article class="exercise-card"><div class="exercise-name">День восстановления 🧘</div><div class="exercise-count">По текущему расписанию сегодня нет обязательных упражнений.</div></article>';
+    list.innerHTML = `
+      <article class="exercise-card rest-card">
+        <div class="exercise-name">День восстановления</div>
+        <div class="exercise-count">Восстановление — часть прогресса.<br>Сегодня можно отдохнуть с чистой совестью.</div>
+      </article>`;
     return;
   }
 
@@ -229,11 +286,11 @@ function renderToday() {
     return `
       <article class="exercise-card ${done ? 'done' : ''}" data-id="${ex.id}">
         <div class="exercise-card-header">
-          <div class="exercise-emoji">${ex.emoji}</div>
+          <div class="exercise-mark">${exerciseMark(ex.name)}</div>
           <div class="exercise-info">
             <div class="exercise-name">${escapeHtml(ex.name)}</div>
             <div class="exercise-count">
-              <strong>${count}</strong> / ${ex.target}
+              <strong>${count}</strong> из ${ex.target}
             </div>
           </div>
         </div>
@@ -272,15 +329,15 @@ function renderHistory() {
   document.getElementById('stats-row').innerHTML = `
     <div class="stat-card">
       <div class="stat-value">${stats.streak}</div>
-      <div class="stat-label">текущий стрик</div>
+      <div class="stat-label">серия</div>
     </div>
     <div class="stat-card">
       <div class="stat-value">${stats.bestStreak}</div>
-      <div class="stat-label">лучший стрик</div>
+      <div class="stat-label">рекорд</div>
     </div>
     <div class="stat-card">
       <div class="stat-value">${stats.weekPercent}%</div>
-      <div class="stat-label">выполнено за неделю</div>
+      <div class="stat-label">за неделю</div>
     </div>
   `;
 
@@ -321,9 +378,8 @@ function renderHistoryDayCard() {
   const note = getDayNote(state, date);
   const status = getDayStatus(state, date);
   const statusMap = { complete: 'Выполнено', partial: 'Частично', missed: 'Пропуск', rest: 'Отдых' };
-  const statusIcon = { complete: '✅', partial: '⏳', missed: '❌', rest: '🛌' };
   const list = scheduled.length
-    ? scheduled.map((ex) => `${ex.emoji} ${getExerciseCount(state, ex.id, date)}/${ex.target}`).join(' · ')
+    ? scheduled.map((ex) => `${ex.name} ${getExerciseCount(state, ex.id, date)}/${ex.target}`).join(' · ')
     : 'По расписанию упражнений нет';
   const readableDate = parseDateKey(date).toLocaleDateString('ru-RU', {
     weekday: 'long',
@@ -336,7 +392,7 @@ function renderHistoryDayCard() {
         <div class="history-date">${readableDate}</div>
         <div class="history-detail">${list}</div>
       </div>
-      <span class="history-badge">${statusIcon[status]}</span>
+      <span class="history-badge">${statusPill(status)}</span>
     </div>
     <p class="history-status">Статус: ${statusMap[status]} · ${progress.done}/${progress.total}</p>
     <label class="field">
@@ -356,7 +412,7 @@ function renderActivityFeed() {
   const history = getHistory(state, 20);
   const list = document.getElementById('history-list');
   if (!history.length) {
-    list.innerHTML = '<p class="history-empty">Пока нет записей.<br>Начни первую тренировку!</p>';
+    list.innerHTML = '<p class="history-empty">История начинается с первого повторения.<br>Начни сегодня.</p>';
     return;
   }
 
@@ -367,10 +423,9 @@ function renderActivityFeed() {
       month: 'short',
     });
     const detail = item.scheduled
-      .map((ex) => `${ex.emoji} ${item.log[ex.id] ?? 0}/${ex.target}`)
+      .map((ex) => `${ex.name} ${item.log[ex.id] ?? 0}/${ex.target}`)
       .join(' · ');
     const noteLine = item.note ? `<div class="history-note">${escapeHtml(item.note)}</div>` : '';
-    const badges = { complete: '✅', partial: '⏳', missed: '❌', rest: '🛌' };
 
     return `
       <div class="history-item">
@@ -379,7 +434,7 @@ function renderActivityFeed() {
           <div class="history-detail">${detail}</div>
           ${noteLine}
         </div>
-        <span class="history-badge">${badges[item.status]}</span>
+        ${statusPill(item.status)}
       </div>
     `;
   }).join('');
@@ -448,8 +503,8 @@ function drawWeightChart(entries) {
   ctx.clearRect(0, 0, w, h);
 
   if (entries.length < 2) {
-    ctx.fillStyle = '#8b9cb3';
-    ctx.font = '14px -apple-system, sans-serif';
+    ctx.fillStyle = CHART.muted;
+    ctx.font = 'italic 14px Georgia, serif';
     ctx.textAlign = 'center';
     ctx.fillText('График появится после 2 записей', w / 2, h / 2);
     return;
@@ -465,7 +520,7 @@ function drawWeightChart(entries) {
   const x = (i) => pad.left + (i / (entries.length - 1)) * chartW;
   const y = (v) => pad.top + chartH - ((v - min) / (max - min)) * chartH;
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.strokeStyle = CHART.grid;
   ctx.lineWidth = 1;
   for (let i = 0; i <= 3; i++) {
     const gy = pad.top + (chartH / 3) * i;
@@ -480,8 +535,8 @@ function drawWeightChart(entries) {
     if (i === 0) ctx.moveTo(x(i), y(e.weight));
     else ctx.lineTo(x(i), y(e.weight));
   });
-  ctx.strokeStyle = '#3dd68c';
-  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = CHART.ink;
+  ctx.lineWidth = 2;
   ctx.lineJoin = 'round';
   ctx.stroke();
 
@@ -489,20 +544,20 @@ function drawWeightChart(entries) {
   ctx.lineTo(x(0), pad.top + chartH);
   ctx.closePath();
   const grad = ctx.createLinearGradient(0, pad.top, 0, h);
-  grad.addColorStop(0, 'rgba(61, 214, 140, 0.2)');
-  grad.addColorStop(1, 'rgba(61, 214, 140, 0)');
+  grad.addColorStop(0, 'rgba(28, 28, 28, 0.08)');
+  grad.addColorStop(1, 'rgba(28, 28, 28, 0)');
   ctx.fillStyle = grad;
   ctx.fill();
 
   entries.forEach((e, i) => {
     ctx.beginPath();
     ctx.arc(x(i), y(e.weight), 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#3dd68c';
+    ctx.fillStyle = CHART.ink;
     ctx.fill();
   });
 
-  ctx.fillStyle = '#8b9cb3';
-  ctx.font = '11px -apple-system, sans-serif';
+  ctx.fillStyle = CHART.muted;
+  ctx.font = '11px "Source Sans 3", sans-serif';
   ctx.textAlign = 'right';
   ctx.fillText(max.toFixed(1), pad.left - 6, pad.top + 4);
   ctx.fillText(min.toFixed(1), pad.left - 6, pad.top + chartH);
@@ -532,14 +587,14 @@ function renderActivityChart() {
     const y = pad.top + chartH - (item.reps / maxReps) * chartH;
     const height = Math.max(2, pad.top + chartH - y);
     const color =
-      item.status === 'complete' ? '#3dd68c' :
-      item.status === 'partial' ? '#ffcd64' :
-      item.status === 'missed' ? '#ff6b6b' : '#506174';
+      item.status === 'complete' ? CHART.success :
+      item.status === 'partial' ? CHART.warn :
+      item.status === 'missed' ? CHART.danger : CHART.rest;
     ctx.fillStyle = color;
     ctx.fillRect(x, y, barW, height);
     if (i % 3 === 0) {
-      ctx.fillStyle = '#8b9cb3';
-      ctx.font = '10px -apple-system, sans-serif';
+      ctx.fillStyle = CHART.muted;
+      ctx.font = '10px "Source Sans 3", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(item.label.split(' ')[0], x + barW / 2, h - 6);
     }
@@ -548,13 +603,13 @@ function renderActivityChart() {
 
 function renderAchievements(stats) {
   const data = [
-    { done: stats.completedDays >= 7, icon: '🏅', text: '7 завершенных тренировок' },
-    { done: stats.bestStreak >= 5, icon: '🔥', text: 'Стрик 5+ дней' },
-    { done: stats.totalReps >= 1000, icon: '💯', text: '1000+ повторений' },
-    { done: state.weightLog.length >= 10, icon: '⚖️', text: '10 записей веса' },
+    { done: stats.completedDays >= 7, text: 'Семь завершённых тренировок' },
+    { done: stats.bestStreak >= 5, text: 'Серия из пяти дней' },
+    { done: stats.totalReps >= 1000, text: 'Тысяча повторений' },
+    { done: state.weightLog.length >= 10, text: 'Десять записей веса' },
   ];
   document.getElementById('achievements').innerHTML = data
-    .map((a) => `<div class="achievement ${a.done ? 'unlocked' : ''}">${a.icon} ${a.text}</div>`)
+    .map((a) => `<div class="achievement ${a.done ? 'unlocked' : ''}">${a.text}</div>`)
     .join('');
 }
 
@@ -562,15 +617,15 @@ function renderSettings() {
   const container = document.getElementById('settings-exercises');
   container.innerHTML = state.exercises.map((ex) => `
     <div class="settings-item" data-id="${ex.id}">
-      <span class="settings-item-emoji">${ex.emoji}</span>
+      <span class="settings-item-mark">${exerciseMark(ex.name)}</span>
       <div class="settings-item-info">
         <div class="settings-item-name">${escapeHtml(ex.name)}</div>
-        <div class="settings-item-target">Цель: ${ex.target} повторений</div>
-        <div class="settings-item-target">Частота: ${getFrequencyLabel(ex)}</div>
+        <div class="settings-item-target">Цель · ${ex.target} повторений</div>
+        <div class="settings-item-target">Ритм · ${getFrequencyLabel(ex)}</div>
       </div>
       <div class="settings-item-actions">
-        <button class="btn-icon" data-edit="${ex.id}" title="Изменить">✏️</button>
-        <button class="btn-icon danger" data-delete="${ex.id}" title="Удалить">🗑</button>
+        <button class="btn-icon" data-edit="${ex.id}" title="Изменить">✎</button>
+        <button class="btn-icon danger" data-delete="${ex.id}" title="Удалить">×</button>
       </div>
     </div>
   `).join('');

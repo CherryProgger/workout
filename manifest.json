@@ -1,12 +1,12 @@
 {
-  "name": "Workout",
-  "short_name": "Workout",
+  "name": "FORM",
+  "short_name": "FORM",
   "description": "Личный трекер тренировок",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0f1419",
-  "theme_color": "#0f1419",
+  "background_color": "#f4f1eb",
+  "theme_color": "#f4f1eb",
   "orientation": "portrait",
   "lang": "ru",
   "icons": [
