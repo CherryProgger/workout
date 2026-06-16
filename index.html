@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0f1419">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Workout">
+  <title>Workout</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="header-top">
+        <h1 class="header-title" id="page-title">Сегодня</h1>
+        <div class="streak-badge" id="streak-badge" hidden>
+          <span class="streak-fire">🔥</span>
+          <span id="streak-count">0</span>
+        </div>
+      </div>
+      <p class="header-date" id="header-date"></p>
+    </header>
+
+    <main class="main">
+      <!-- TODAY -->
+      <section class="view view-active" id="view-today" data-view="today">
+        <div class="progress-summary" id="progress-summary">
+          <div class="progress-ring-wrap">
+            <svg class="progress-ring" viewBox="0 0 120 120">
+              <circle class="progress-ring-bg" cx="60" cy="60" r="52"></circle>
+              <circle class="progress-ring-fill" id="progress-ring-fill" cx="60" cy="60" r="52"></circle>
+            </svg>
+            <div class="progress-ring-label">
+              <span class="progress-ring-value" id="progress-percent">0%</span>
+              <span class="progress-ring-caption">готово</span>
+            </div>
+          </div>
+          <p class="progress-text" id="progress-text">0 из 0 повторений</p>
+        </div>
+
+        <div class="exercise-list" id="exercise-list"></div>
+
+        <div class="complete-banner" id="complete-banner" hidden>
+          <span>🎉</span>
+          <div>
+            <strong>Тренировка выполнена!</strong>
+            <p>Отличная работа, так держать.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section class="view" id="view-history" data-view="history">
+        <div class="stats-row" id="stats-row"></div>
+        <div class="calendar-wrap">
+          <h3 class="settings-heading">Активность 14 дней</h3>
+          <canvas id="activity-chart" class="weight-chart"></canvas>
+        </div>
+        <div class="calendar-wrap">
+          <h3 class="settings-heading">Достижения</h3>
+          <div class="achievements" id="achievements"></div>
+        </div>
+        <div class="calendar-wrap">
+          <div class="calendar-header">
+            <button class="btn-icon" id="calendar-prev" title="Предыдущий месяц">◀</button>
+            <strong id="calendar-title"></strong>
+            <button class="btn-icon" id="calendar-next" title="Следующий месяц">▶</button>
+          </div>
+          <div class="calendar-weekdays" id="calendar-weekdays"></div>
+          <div class="calendar-grid" id="calendar-grid"></div>
+        </div>
+        <div class="history-day-card" id="history-day-card"></div>
+        <div class="history-list" id="history-list"></div>
+      </section>
+
+      <!-- WEIGHT -->
+      <section class="view" id="view-weight" data-view="weight">
+        <div class="weight-current" id="weight-current">
+          <p class="weight-label">Текущий вес</p>
+          <p class="weight-value" id="weight-value">—</p>
+          <p class="weight-change" id="weight-change"></p>
+        </div>
+        <canvas id="weight-chart" class="weight-chart"></canvas>
+        <form class="weight-form" id="weight-form">
+          <input type="number" id="weight-input" step="0.1" min="30" max="300" placeholder="кг" inputmode="decimal" required>
+          <button type="submit" class="btn btn-primary">Записать</button>
+        </form>
+        <div class="weight-history" id="weight-history"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings" data-view="settings">
+        <div class="settings-section">
+          <h2 class="settings-heading">Упражнения</h2>
+          <div class="settings-list" id="settings-exercises"></div>
+          <button class="btn btn-secondary btn-block" id="add-exercise-btn">+ Добавить упражнение</button>
+        </div>
+
+        <div class="settings-section">
+          <h2 class="settings-heading">Шаблоны</h2>
+          <div class="template-grid">
+            <button class="btn btn-secondary" data-template="classic">Классика 100/100/100</button>
+            <button class="btn btn-secondary" data-template="strength">Силовой фокус</button>
+            <button class="btn btn-secondary" data-template="light">Легкий старт</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h2 class="settings-heading">Напоминания</h2>
+          <label class="toggle-row">
+            <span>Ежедневное напоминание</span>
+            <input type="checkbox" id="reminder-enabled">
+          </label>
+          <label class="field-row">
+            <span>Время</span>
+            <input type="time" id="reminder-time" value="08:00">
+          </label>
+          <p class="settings-hint">На iPhone напоминания работают, если приложение добавлено на экран «Домой» и разрешены уведомления.</p>
+          <button class="btn btn-secondary btn-block" id="request-notifications-btn">Разрешить уведомления</button>
+        </div>
+
+        <div class="settings-section">
+          <h2 class="settings-heading">Данные</h2>
+          <button class="btn btn-secondary btn-block" id="export-data-btn">Экспортировать данные</button>
+          <label class="btn btn-secondary btn-block import-btn">
+            Импортировать данные
+            <input type="file" id="import-data-input" accept="application/json" hidden>
+          </label>
+          <button class="btn btn-secondary btn-block" id="clear-data-btn">Сбросить все данные</button>
+        </div>
+
+        <div class="settings-section">
+          <h2 class="settings-heading">Установка</h2>
+          <div class="install-hint" id="install-hint">
+            <p><strong>Как установить на iPhone:</strong></p>
+            <ol>
+              <li>Открой это приложение в Safari</li>
+              <li>Нажми «Поделиться» (квадрат со стрелкой)</li>
+              <li>Выбери «На экран Домой»</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tab-bar">
+      <button class="tab tab-active" data-tab="today">
+        <span class="tab-icon">💪</span>
+        <span class="tab-label">Сегодня</span>
+      </button>
+      <button class="tab" data-tab="history">
+        <span class="tab-icon">📅</span>
+        <span class="tab-label">История</span>
+      </button>
+      <button class="tab" data-tab="weight">
+        <span class="tab-icon">⚖️</span>
+        <span class="tab-label">Вес</span>
+      </button>
+      <button class="tab" data-tab="settings">
+        <span class="tab-icon">⚙️</span>
+        <span class="tab-label">Настройки</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Modal: add/edit exercise -->
+  <dialog class="modal" id="exercise-modal">
+    <form class="modal-form" id="exercise-form">
+      <h2 class="modal-title" id="exercise-modal-title">Новое упражнение</h2>
+      <label class="field">
+        <span>Название</span>
+        <input type="text" id="exercise-name" required maxlength="40" placeholder="Например, планка">
+      </label>
+      <label class="field">
+        <span>Цель (повторений)</span>
+        <input type="number" id="exercise-target" min="1" max="9999" value="100" required inputmode="numeric">
+      </label>
+      <label class="field">
+        <span>Эмодзи</span>
+        <input type="text" id="exercise-emoji" maxlength="2" value="🏋️" placeholder="🏋️">
+      </label>
+      <label class="field">
+        <span>Частота</span>
+        <select id="exercise-frequency">
+          <option value="daily">Каждый день</option>
+          <option value="weekdays">Будни</option>
+          <option value="weekends">Выходные</option>
+          <option value="eod">Через день</option>
+          <option value="3week">3 раза в неделю</option>
+          <option value="custom">Свои дни</option>
+        </select>
+      </label>
+      <div class="field" id="custom-days-field" hidden>
+        <span>Дни недели</span>
+        <div class="weekday-picker" id="weekday-picker">
+          <label><input type="checkbox" value="1">Пн</label>
+          <label><input type="checkbox" value="2">Вт</label>
+          <label><input type="checkbox" value="3">Ср</label>
+          <label><input type="checkbox" value="4">Чт</label>
+          <label><input type="checkbox" value="5">Пт</label>
+          <label><input type="checkbox" value="6">Сб</label>
+          <label><input type="checkbox" value="0">Вс</label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="exercise-cancel">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
